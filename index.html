@@ -1292,11 +1292,7 @@ async function executeSwap() {
     if (quote.transaction && quote.transaction.to) {
       var tx = quote.transaction;
 
-      // Add Builder Code to transaction data
       var txData = tx.data || "0x";
-      if (typeof BUILDER_CODE_HEX !== "undefined" && txData.length > 2) {
-        txData = txData + BUILDER_CODE_HEX.slice(2);
-      }
 
       // Check if permit2 signature needed (for ERC20 tokens)
       if (quote.permit2 && quote.permit2.eip712) {
