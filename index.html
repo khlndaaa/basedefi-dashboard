@@ -1292,19 +1292,8 @@ async function executeSwap() {
     if (quote.transaction && quote.transaction.to) {
       var tx = quote.transaction;
 
+      // Use tx.data exactly as returned by 0x — do not modify it
       var txData = tx.data || "0x";
-
-      // Sign permit2 if needed — signature is appended to txData by 0x contract
-      // The signed permit authorizes the spend; we pass it back via the tx data field
-      if (quote.permit2 && quote.permit2.eip712) {
-        var sig = await window.ethereum.request({
-          method: "eth_signTypedData_v4",
-          params: [window._walletAddr, JSON.stringify(quote.permit2.eip712)]
-        });
-        // Correct way: replace last 65 bytes placeholder in txData with real signature
-        // sig is 132 hex chars (0x + 130), slice(2) = 130 chars = 65 bytes
-        txData = txData.slice(0, -130) + sig.slice(2);
-      }
 
       // Parse value safely — may come as hex string or decimal string
       var txValue = tx.value || "0";
