@@ -3,7 +3,7 @@
 
 exports.handler = async function(event) {
   const params = event.queryStringParameters || {};
-  const { sellToken, buyToken, sellAmount, taker, affiliateAddress, affiliateFee } = params;
+  const { sellToken, buyToken, sellAmount, taker } = params;
 
   if (!sellToken || !buyToken || !sellAmount || !taker) {
     return {
@@ -12,14 +12,17 @@ exports.handler = async function(event) {
     };
   }
 
+  const AFFILIATE_WALLET = "0xdf1496a7d0fe0fe557d41d2d5ea7e64ac15d032e";
+
   const url = new URL("https://api.0x.org/swap/permit2/quote");
   url.searchParams.set("chainId", "8453");
   url.searchParams.set("sellToken", sellToken);
   url.searchParams.set("buyToken", buyToken);
   url.searchParams.set("sellAmount", sellAmount);
   url.searchParams.set("taker", taker);
-  if (affiliateAddress) url.searchParams.set("affiliateAddress", affiliateAddress);
-  if (affiliateFee) url.searchParams.set("affiliateFee", affiliateFee);
+  // Correct param names for 0x Permit2 API v2
+  url.searchParams.set("feeRecipient", AFFILIATE_WALLET);
+  url.searchParams.set("feeBps", "15"); // 0.15%
 
   try {
     const response = await fetch(url.toString(), {
