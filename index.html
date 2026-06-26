@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="base:app_id" content="69d8cd15d5e62220679380a1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Base DeFi Dashboard</title>
+  <meta name="theme-color" content="#080a12" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="BaseDeFi" />
+  <link rel="manifest" href="/manifest.json" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Inter',sans-serif; background:#080a12; color:#fff; min-height:100vh; }
+
+    /* TOPBAR */
+    .topbar {
+      position:fixed; top:0; left:0; right:0; z-index:100;
+      background:rgba(8,10,18,0.85); backdrop-filter:blur(16px);
+      border-bottom:1px solid rgba(255,255,255,0.06);
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 24px; height:60px;
+    }
+    .topbar-logo { font-size:1.1rem; font-weight:800; letter-spacing:-0.5px; }
+    .topbar-logo span { color:#0052ff; }
+    .topbar-right { display:flex; align-items:center; gap:12px; }
+
+    .wallet-btn {
+      background:#0052ff; color:#fff; border:none;
+      border-radius:10px; padding:8px 16px; font-size:0.82rem;
+      cursor:pointer; font-weight:600; transition:all 0.2s;
+      display:flex; align-items:center; gap:8px; font-family:'Inter',sans-serif;
+    }
+    .wallet-btn:hover { background:#003ecc; transform:translateY(-1px); }
+    .wallet-btn.connected { background:rgba(0,196,140,0.12); color:#00c48c; border:1px solid rgba(0,196,140,0.3); }
+    .wallet-dot { width:7px; height:7px; border-radius:50%; background:#00c48c; }
+
+    .lang-wrapper { position:relative; }
+    .lang-trigger {
+      background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+      color:#fff; border-radius:8px; padding:7px 12px; font-size:0.82rem;
+      cursor:pointer; display:flex; align-items:center; gap:6px; user-select:none;
+      font-family:'Inter',sans-serif;
+    }
+    .lang-trigger:hover { border-color:rgba(0,82,255,0.5); }
+    .arrow { font-size:0.6rem; color:#8b8fa8; transition:transform 0.2s; }
+    .lang-wrapper.open .arrow { transform:rotate(180deg); }
+    .lang-dropdown {
+      position:absolute; top:calc(100% + 8px); right:0;
+      background:#12141f; border:1px solid rgba(255,255,255,0.08);
+      border-radius:12px; overflow:hidden; min-width:150px;
+      box-shadow:0 16px 48px rgba(0,0,0,0.6); display:none;
+    }
+    .lang-wrapper.open .lang-dropdown { display:block; }
+    .lang-option { padding:10px 16px; font-size:0.82rem; cursor:pointer; color:#8b8fa8; transition:all 0.15s; }
+    .lang-option:hover { background:rgba(255,255,255,0.05); color:#fff; }
+    .lang-option.active { color:#0052ff; background:rgba(0,82,255,0.08); }
+
+    /* LAYOUT */
+    .page { display:flex; padding-top:60px; min-height:100vh; }
+    .main-content { flex:1; min-width:0; padding:28px 24px; }
+    .sidebar { width:320px; flex-shrink:0; padding:28px 20px 28px 0; }
+
+    /* HERO */
+    .hero {
+      background:linear-gradient(135deg, rgba(0,82,255,0.15) 0%, rgba(0,196,140,0.05) 100%);
+      border:1px solid rgba(0,82,255,0.2); border-radius:20px;
+      padding:32px; margin-bottom:24px; position:relative; overflow:hidden;
+    }
+    .hero::before {
+      content:''; position:absolute; top:-60px; right:-60px;
+      width:200px; height:200px; border-radius:50%;
+      background:radial-gradient(circle, rgba(0,82,255,0.2) 0%, transparent 70%);
+    }
+    .hero h1 { font-size:1.8rem; font-weight:800; letter-spacing:-0.5px; margin-bottom:6px; }
+    .hero h1 span { color:#0052ff; }
+    .hero p { color:#8b8fa8; font-size:0.9rem; margin-bottom:16px; }
+    .hero-badges { display:flex; gap:8px; flex-wrap:wrap; }
+    .hero-badge {
+      display:inline-flex; align-items:center; gap:6px;
+      background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+      border-radius:20px; padding:5px 12px; font-size:0.78rem; color:#8b8fa8;
+    }
+    .live-dot { width:6px; height:6px; border-radius:50%; background:#00c48c; animation:pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* WALLET PANEL */
+    .wallet-panel {
+      background:rgba(0,82,255,0.08); border:1px solid rgba(0,82,255,0.2);
+      border-radius:16px; padding:18px 20px; margin-bottom:24px; display:none;
+    }
+    .wallet-panel.show { display:block; }
+    .wallet-panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+    .wallet-panel-title { font-weight:700; font-size:0.9rem; }
+    .wallet-address { font-size:0.75rem; color:#8b8fa8; font-family:monospace; }
+    .wallet-balances { display:flex; gap:12px; }
+    .balance-item { background:rgba(0,0,0,0.3); border-radius:10px; padding:10px 14px; flex:1; }
+    .balance-token { font-size:0.72rem; color:#8b8fa8; margin-bottom:3px; }
+    .balance-amount { font-size:0.95rem; font-weight:700; }
+
+    /* CALCULATOR */
+    .section-label { font-size:0.72rem; font-weight:700; color:#8b8fa8; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
+    .calc-box {
+      background:#12141f; border:1px solid rgba(255,255,255,0.07);
+      border-radius:16px; padding:20px; margin-bottom:24px;
+    }
+    .calc-row { display:flex; gap:10px; align-items:flex-end; margin-bottom:16px; flex-wrap:wrap; }
+    .calc-field { flex:1; min-width:140px; }
+    .calc-field label { display:block; font-size:0.75rem; color:#8b8fa8; margin-bottom:6px; font-weight:500; }
+    .calc-field input, .calc-field select {
+      width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+      border-radius:10px; padding:10px 14px; color:#fff; font-size:0.9rem;
+      outline:none; transition:border-color 0.2s; font-family:'Inter',sans-serif;
+    }
+    .calc-field input:focus, .calc-field select:focus { border-color:#0052ff; }
+    .calc-field select option { background:#12141f; }
+    .calc-btn {
+      background:#0052ff; color:#fff; border:none; border-radius:10px;
+      padding:10px 20px; font-size:0.88rem; font-weight:600;
+      cursor:pointer; white-space:nowrap; font-family:'Inter',sans-serif;
+      transition:all 0.2s;
+    }
+    .calc-btn:hover { background:#003ecc; }
+    .calc-results { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:10px; }
+    .calc-card {
+      background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07);
+      border-radius:12px; padding:14px; transition:border-color 0.2s;
+    }
+    .calc-card.best { border-color:rgba(0,196,140,0.4); background:rgba(0,196,140,0.05); }
+    .calc-card-name { font-size:0.75rem; color:#8b8fa8; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+    .best-tag { font-size:0.65rem; background:rgba(0,196,140,0.2); color:#00c48c; border-radius:6px; padding:1px 6px; }
+    .calc-monthly { font-size:1.15rem; font-weight:700; color:#00c48c; }
+    .calc-yearly { font-size:0.72rem; color:#8b8fa8; margin-top:2px; }
+
+    /* PROTOCOLS GRID */
+    .protocols-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:14px; margin-bottom:24px; }
+    .proto-card {
+      background:#12141f; border:1px solid rgba(255,255,255,0.07);
+      border-radius:16px; padding:20px; transition:all 0.2s; cursor:default;
+    }
+    .proto-card:hover { border-color:rgba(0,82,255,0.4); transform:translateY(-2px); box-shadow:0 8px 32px rgba(0,82,255,0.1); }
+    .proto-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+    .proto-logo {
+      width:38px; height:38px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:0.72rem; flex-shrink:0;
+    }
+    .proto-logo.aave { background:rgba(182,80,158,0.15); color:#b6509e; border:1px solid rgba(182,80,158,0.3); }
+    .proto-logo.aerodrome { background:rgba(255,68,68,0.15); color:#ff4444; border:1px solid rgba(255,68,68,0.3); }
+    .proto-logo.moonwell { background:rgba(244,164,96,0.15); color:#f4a460; border:1px solid rgba(244,164,96,0.3); }
+    .proto-logo.compound { background:rgba(0,211,149,0.15); color:#00d395; border:1px solid rgba(0,211,149,0.3); }
+    .proto-logo.morpho { background:rgba(155,89,182,0.15); color:#9b59b6; border:1px solid rgba(155,89,182,0.3); }
+    .proto-logo.extra { background:rgba(241,196,15,0.15); color:#f1c40f; border:1px solid rgba(241,196,15,0.3); }
+    .proto-name { font-weight:700; font-size:0.95rem; }
+    .proto-type { color:#8b8fa8; font-size:0.75rem; }
+    .proto-apy { font-size:1.9rem; font-weight:800; color:#00c48c; margin-bottom:3px; letter-spacing:-1px; }
+    .proto-apy.loading { background:rgba(255,255,255,0.07); border-radius:8px; color:transparent; animation:shimmer 1.5s infinite; width:100px; height:36px; }
+    @keyframes shimmer { 0%,100%{opacity:0.5} 50%{opacity:1} }
+    .proto-apy-label { font-size:0.75rem; color:#8b8fa8; margin-bottom:12px; }
+    .proto-stats { display:flex; gap:16px; margin-bottom:14px; }
+    .proto-stat-label { font-size:0.68rem; color:#8b8fa8; margin-bottom:2px; }
+    .proto-stat-value { font-size:0.85rem; font-weight:600; }
+    .proto-stat-value.loading { background:rgba(255,255,255,0.07); border-radius:4px; height:16px; width:50px; display:inline-block; animation:shimmer 1.5s infinite; }
+    .risk-tag { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:0.72rem; font-weight:600; margin-bottom:14px; }
+    .risk-tag.low { background:rgba(0,196,140,0.1); color:#00c48c; }
+    .risk-tag.medium { background:rgba(244,164,96,0.1); color:#f4a460; }
+    .proto-btn {
+      display:block; width:100%; padding:10px; text-align:center;
+      background:rgba(0,82,255,0.15); color:#4d8bff;
+      border:1px solid rgba(0,82,255,0.25); border-radius:10px;
+      text-decoration:none; font-weight:600; font-size:0.85rem;
+      transition:all 0.2s;
+    }
+    .proto-btn:hover { background:#0052ff; color:#fff; border-color:#0052ff; }
+    .proto-source { font-size:0.68rem; color:#8b8fa8; text-align:right; margin-top:8px; }
+    .proto-source a { color:#4d8bff; text-decoration:none; }
+
+    /* SIDEBAR */
+    .sidebar-box {
+      background:#12141f; border:1px solid rgba(255,255,255,0.07);
+      border-radius:16px; overflow:hidden; margin-bottom:16px;
+    }
+    .sidebar-header {
+      padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.07);
+      font-size:0.78rem; font-weight:700; color:#8b8fa8;
+      text-transform:uppercase; letter-spacing:1px;
+      display:flex; align-items:center; gap:8px;
+    }
+    .news-item { padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.15s; }
+    .news-item:last-child { border-bottom:none; }
+    .news-item:hover { background:rgba(255,255,255,0.03); }
+    .news-item a { text-decoration:none; color:inherit; }
+    .news-title { font-size:0.82rem; font-weight:600; color:#e0e0e0; margin-bottom:4px; line-height:1.4; }
+    .news-meta { font-size:0.7rem; color:#8b8fa8; display:flex; gap:8px; align-items:center; }
+    .news-dot { width:3px; height:3px; border-radius:50%; background:#8b8fa8; }
+    .news-loading { padding:14px 18px; color:#8b8fa8; font-size:0.82rem; text-align:center; }
+
+    /* STATS SIDEBAR */
+    .stat-row { padding:12px 18px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; }
+    .stat-row:last-child { border-bottom:none; }
+    .stat-row-label { font-size:0.78rem; color:#8b8fa8; }
+    .stat-row-value { font-size:0.85rem; font-weight:700; color:#00c48c; }
+
+    /* DISCLAIMER */
+    .disclaimer {
+      background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07);
+      border-radius:12px; padding:14px 18px; color:#8b8fa8; font-size:0.78rem; line-height:1.6;
+    }
+
+    /* PORTFOLIO */
+    .portfolio-box {
+      background:#12141f; border:1px solid rgba(255,255,255,0.07);
+      border-radius:16px; overflow:hidden; margin-bottom:24px;
+    }
+    .portfolio-header {
+      padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.07);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .portfolio-total { font-size:1.5rem; font-weight:800; color:#00c48c; }
+    .portfolio-total-label { font-size:0.75rem; color:#8b8fa8; margin-top:2px; }
+    .portfolio-row {
+      display:flex; align-items:center; padding:14px 20px;
+      border-bottom:1px solid rgba(255,255,255,0.05); gap:12px;
+    }
+    .portfolio-row:last-child { border-bottom:none; }
+    .portfolio-proto { flex:1; font-size:0.85rem; font-weight:600; }
+    .portfolio-balance { font-size:0.85rem; font-weight:700; }
+    .portfolio-earned { font-size:0.75rem; color:#00c48c; }
+    .portfolio-empty {
+      padding:32px; text-align:center; color:#8b8fa8; font-size:0.85rem;
+    }
+    .portfolio-empty .portfolio-icon { font-size:2rem; margin-bottom:8px; }
+
+    /* YIELD OPTIMIZER */
+    .optimizer-box {
+      background:#12141f; border:1px solid rgba(255,255,255,0.07);
+      border-radius:16px; padding:20px; margin-bottom:24px;
+    }
+    .optimizer-result {
+      background:linear-gradient(135deg, rgba(0,196,140,0.1) 0%, rgba(0,82,255,0.05) 100%);
+      border:1px solid rgba(0,196,140,0.2); border-radius:12px; padding:16px;
+      margin-top:14px; display:none;
+    }
+    .optimizer-result.show { display:block; }
+    .optimizer-best-name { font-size:1rem; font-weight:700; color:#00c48c; margin-bottom:4px; }
+    .optimizer-best-apy { font-size:1.8rem; font-weight:800; color:#00c48c; }
+    .optimizer-explanation { font-size:0.78rem; color:#8b8fa8; margin-top:8px; line-height:1.5; }
+    .optimizer-table { margin-top:14px; }
+    .optimizer-row {
+      display:flex; align-items:center; padding:8px 0;
+      border-bottom:1px solid rgba(255,255,255,0.05); gap:10px;
+    }
+    .optimizer-row:last-child { border-bottom:none; }
+    .optimizer-rank { font-size:0.75rem; color:#8b8fa8; width:20px; }
+    .optimizer-name { flex:1; font-size:0.82rem; }
+    .optimizer-apy-val { font-size:0.82rem; font-weight:700; color:#00c48c; }
+    .optimizer-profit { font-size:0.75rem; color:#8b8fa8; width:80px; text-align:right; }
+    .opt-btn {
+      display:inline-block; margin-top:12px; padding:8px 16px;
+      background:#0052ff; color:#fff; border-radius:8px;
+      text-decoration:none; font-size:0.82rem; font-weight:600;
+      border:none; cursor:pointer; transition:background 0.2s;
+    }
+    .opt-btn:hover { background:#003ecc; }
+
+    /* SWAP */
+    .swap-box {
+      background:#12141f; border:1px solid rgba(255,255,255,0.07);
+      border-radius:16px; padding:20px; margin-bottom:24px;
+    }
+    .swap-row { display:flex; gap:10px; align-items:flex-end; margin-bottom:14px; flex-wrap:wrap; }
+    .swap-field { flex:1; min-width:120px; }
+    .swap-field label { display:block; font-size:0.72rem; color:#8b8fa8; margin-bottom:6px; }
+    .swap-field input, .swap-field select {
+      width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+      border-radius:10px; padding:10px 14px; color:#fff; font-size:0.9rem;
+      outline:none; font-family:'Inter',sans-serif;
+    }
+    .swap-field select option { background:#12141f; }
+    .swap-arrow-btn {
+      background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+      border-radius:8px; padding:10px 12px; cursor:pointer; font-size:1rem;
+      color:#8b8fa8; transition:all 0.2s; align-self:flex-end;
+    }
+    .swap-arrow-btn:hover { color:#fff; border-color:rgba(0,82,255,0.5); }
+    .swap-info {
+      background:rgba(255,255,255,0.03); border-radius:8px; padding:10px 14px;
+      font-size:0.78rem; color:#8b8fa8; margin-bottom:14px; display:none;
+    }
+    .swap-info.show { display:block; }
+    .swap-execute-btn {
+      width:100%; padding:12px; background:#0052ff; color:#fff;
+      border:none; border-radius:10px; font-size:0.9rem; font-weight:700;
+      cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.2s;
+    }
+    .swap-execute-btn:hover { background:#003ecc; }
+    .swap-execute-btn:disabled { background:#1e2030; color:#8b8fa8; cursor:not-allowed; }
+
+    /* MODAL */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+    .modal-overlay.show { display:flex; }
+    .modal { background:#12141f; border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:28px; max-width:340px; width:90%; }
+    .modal h3 { font-size:1.1rem; font-weight:700; margin-bottom:6px; }
+    .modal p { color:#8b8fa8; font-size:0.82rem; margin-bottom:20px; }
+    .modal-btns { display:flex; flex-direction:column; gap:10px; }
+    .modal-wallet-btn {
+      display:flex; align-items:center; gap:12px;
+      background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+      border-radius:12px; padding:13px 16px; cursor:pointer;
+      transition:all 0.15s; color:#fff; font-size:0.9rem; font-weight:600;
+    }
+    .modal-wallet-btn:hover { border-color:rgba(0,82,255,0.5); background:rgba(0,82,255,0.08); }
+    .modal-icon { font-size:1.4rem; }
+    .modal-badge { margin-left:auto; font-size:0.65rem; background:rgba(0,82,255,0.2); color:#4d8bff; border-radius:6px; padding:2px 7px; }
+    .modal-close { margin-top:14px; text-align:center; color:#8b8fa8; font-size:0.82rem; cursor:pointer; }
+    .modal-close:hover { color:#fff; }
+
+    .last-updated { font-size:0.72rem; color:#8b8fa8; }
+
+    /* TOP POOLS TABLE */
+    .pools-table { width:100%; border-collapse:collapse; margin-top:4px; }
+    .pools-table th { font-size:0.7rem; color:#8b8fa8; font-weight:600; text-align:left; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.07); text-transform:uppercase; letter-spacing:0.5px; }
+    .pools-table td { font-size:0.82rem; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .pools-table tr:last-child td { border-bottom:none; }
+    .pools-table tr:hover td { background:rgba(255,255,255,0.02); }
+    .pool-rank { color:#8b8fa8; font-size:0.72rem; width:24px; }
+    .pool-name { font-weight:600; }
+    .pool-proto { font-size:0.72rem; color:#8b8fa8; }
+    .pool-apy-val { color:#00c48c; font-weight:700; }
+    .pool-tvl-val { color:#8b8fa8; }
+    .pool-risk-low { display:inline-block; background:rgba(0,196,140,0.1); color:#00c48c; border-radius:6px; padding:1px 7px; font-size:0.68rem; }
+    .pool-risk-med { display:inline-block; background:rgba(244,164,96,0.1); color:#f4a460; border-radius:6px; padding:1px 7px; font-size:0.68rem; }
+    .pool-link { color:#4d8bff; text-decoration:none; font-size:0.75rem; }
+    .pool-link:hover { color:#fff; }
+    .pools-loading { padding:20px; text-align:center; color:#8b8fa8; font-size:0.82rem; }
+
+    /* SHARE */
+    .share-btn {
+      display:inline-flex; align-items:center; gap:6px;
+      background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+      border-radius:8px; padding:6px 12px; font-size:0.78rem; color:#8b8fa8;
+      cursor:pointer; transition:all 0.2s; font-family:'Inter',sans-serif;
+    }
+    .share-btn:hover { border-color:rgba(0,82,255,0.5); color:#fff; }
+
+    /* AI ASSISTANT */
+    .ai-box {
+      background:#12141f; border:1px solid rgba(0,82,255,0.2);
+      border-radius:16px; overflow:hidden; margin-bottom:24px;
+    }
+    .ai-messages {
+      height:280px; overflow-y:auto; padding:16px;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .ai-msg { max-width:85%; padding:10px 14px; border-radius:12px; font-size:0.82rem; line-height:1.5; }
+    .ai-msg.user { background:rgba(0,82,255,0.2); color:#fff; align-self:flex-end; border-radius:12px 12px 4px 12px; }
+    .ai-msg.bot { background:rgba(255,255,255,0.06); color:#e0e0e0; align-self:flex-start; border-radius:12px 12px 12px 4px; }
+    .ai-msg.loading { color:#8b8fa8; animation:pulse 1.5s infinite; }
+    .ai-input-row { display:flex; gap:8px; padding:12px 16px; border-top:1px solid rgba(255,255,255,0.07); }
+    .ai-input {
+      flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+      border-radius:10px; padding:10px 14px; color:#fff; font-size:0.85rem;
+      outline:none; font-family:'Inter',sans-serif;
+    }
+    .ai-input:focus { border-color:#0052ff; }
+    .ai-send-btn {
+      background:#0052ff; color:#fff; border:none; border-radius:10px;
+      padding:10px 16px; cursor:pointer; font-size:0.85rem; transition:background 0.2s;
+    }
+    .ai-send-btn:hover { background:#003ecc; }
+    .ai-suggestions { display:flex; flex-wrap:wrap; gap:6px; padding:0 16px 12px; }
+    .ai-suggestion {
+      background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+      border-radius:20px; padding:5px 12px; font-size:0.75rem; color:#8b8fa8;
+      cursor:pointer; transition:all 0.15s;
+    }
+    .ai-suggestion:hover { border-color:#0052ff; color:#fff; }
+
+    /* PWA INSTALL */
+    .pwa-banner {
+      background:linear-gradient(135deg, rgba(0,82,255,0.15), rgba(0,196,140,0.1));
+      border:1px solid rgba(0,82,255,0.3); border-radius:12px;
+      padding:12px 16px; margin-bottom:16px;
+      display:flex; align-items:center; gap:12px; display:none;
+    }
+    .pwa-banner.show { display:flex; }
+    .pwa-install-btn {
+      background:#0052ff; color:#fff; border:none; border-radius:8px;
+      padding:7px 14px; font-size:0.78rem; font-weight:600; cursor:pointer;
+      white-space:nowrap; font-family:'Inter',sans-serif;
+    }
+    .pwa-dismiss { color:#8b8fa8; font-size:0.75rem; cursor:pointer; margin-left:auto; }
+    .pwa-dismiss:hover { color:#fff; }
+
+    /* ALERTS */
+    .alert-form { display:flex; flex-direction:column; gap:10px; }
+    .alert-row { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
+    .alert-field { flex:1; min-width:100px; }
+    .alert-field label { display:block; font-size:0.72rem; color:#8b8fa8; margin-bottom:5px; }
+    .alert-field input, .alert-field select {
+      width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+      border-radius:8px; padding:9px 12px; color:#fff; font-size:0.82rem;
+      outline:none; font-family:'Inter',sans-serif;
+    }
+    .alert-submit {
+      background:#0052ff; color:#fff; border:none; border-radius:8px;
+      padding:9px 16px; font-size:0.82rem; font-weight:600; cursor:pointer;
+      font-family:'Inter',sans-serif; white-space:nowrap;
+    }
+    .alert-list { margin-top:12px; display:flex; flex-direction:column; gap:6px; }
+    .alert-item {
+      display:flex; align-items:center; gap:8px;
+      background:rgba(255,255,255,0.03); border-radius:8px; padding:8px 12px;
+      font-size:0.78rem;
+    }
+    .alert-dot-active { width:7px; height:7px; border-radius:50%; background:#00c48c; flex-shrink:0; }
+    .alert-text { flex:1; color:#e0e0e0; }
+    .alert-remove { color:#8b8fa8; cursor:pointer; font-size:0.85rem; }
+    .alert-remove:hover { color:#ff4444; }
+
+    @media(max-width:900px) {
+      .page { flex-direction:column; }
+      .sidebar { width:100%; padding:0 24px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">Base <span>DeFi</span></div>
+  <div class="topbar-right">
+    <button class="wallet-btn" id="walletBtn" onclick="openWalletModal()">
+      🔗 <span data-i18n="connect_wallet">Connect Wallet</span>
+    </button>
+    <div class="lang-wrapper" id="langWrapper">
+      <div class="lang-trigger" onclick="toggleLang()">
+        <span id="currentLang">EN</span>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="lang-dropdown">
+        <div class="lang-option active" onclick="setLang('en','EN',this)">English</div>
+        <div class="lang-option" onclick="setLang('uk','UA',this)">Українська</div>
+        <div class="lang-option" onclick="setLang('es','ES',this)">Español</div>
+        <div class="lang-option" onclick="setLang('fr','FR',this)">Français</div>
+        <div class="lang-option" onclick="setLang('de','DE',this)">Deutsch</div>
+        <div class="lang-option" onclick="setLang('pt','PT',this)">Português</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WALLET MODAL -->
+<div class="modal-overlay" id="walletModal">
+  <div class="modal">
+    <h3 data-i18n="modal_title">Connect Wallet</h3>
+    <p data-i18n="modal_subtitle">Choose your wallet to get started</p>
+    <div class="modal-btns">
+      <div class="modal-wallet-btn" onclick="connectMetaMask()"><span class="modal-icon">🦊</span> MetaMask</div>
+      <div class="modal-wallet-btn" onclick="connectCoinbase()"><span class="modal-icon">🔵</span> Coinbase Wallet</div>
+      <div class="modal-wallet-btn" onclick="connectWalletConnect()"><span class="modal-icon">🔗</span> WalletConnect</div>
+      <div class="modal-wallet-btn" onclick="connectBaseApp()"><span class="modal-icon">🔵</span> Base App <span class="modal-badge">Smart Wallet</span></div>
+    </div>
+    <div class="modal-close" onclick="closeWalletModal()" data-i18n="modal_close">Cancel</div>
+  </div>
+</div>
+
+<div class="page">
+  <!-- MAIN -->
+  <div class="main-content">
+
+    <!-- HERO -->
+    <div class="hero">
+      <h1>Base <span>DeFi</span> Dashboard</h1>
+      <p data-i18n="subtitle">Best earning opportunities on Base network</p>
+      <div class="hero-badges">
+        <span class="hero-badge">🔵 Powered by Base</span>
+        <span class="hero-badge"><span class="live-dot"></span> <span data-i18n="live_data">Live Data</span></span>
+        <span class="hero-badge" id="lastUpdated"></span>
+        <button class="share-btn" onclick="sharePortfolio()">📤 Share</button>
+      </div>
+    </div>
+
+    <!-- PWA BANNER -->
+    <div class="pwa-banner" id="pwaBanner">
+      <span style="font-size:1.2rem">📱</span>
+      <div style="flex:1"><div style="font-size:0.82rem;font-weight:600">Install Base DeFi App</div><div style="font-size:0.72rem;color:#8b8fa8">Add to home screen for quick access</div></div>
+      <button class="pwa-install-btn" onclick="installPWA()">Install</button>
+      <span class="pwa-dismiss" onclick="dismissPWA()">✕</span>
+    </div>
+
+    <!-- WALLET PANEL -->
+    <div class="wallet-panel" id="walletPanel">
+      <div class="wallet-panel-header">
+        <span class="wallet-panel-title" data-i18n="your_wallet">Your Wallet</span>
+        <span class="wallet-address" id="walletAddress"></span>
+      </div>
+      <div class="wallet-balances">
+        <div class="balance-item"><div class="balance-token">ETH</div><div class="balance-amount" id="bal-eth">...</div></div>
+        <div class="balance-item"><div class="balance-token">Network</div><div class="balance-amount">Base</div></div>
+      </div>
+    </div>
+
+    <!-- CALCULATOR -->
+    <div class="section-label" data-i18n="calc_title">Profit Calculator</div>
+    <div class="calc-box">
+      <div class="calc-row">
+        <div class="calc-field">
+          <label data-i18n="calc_amount">Amount ($)</label>
+          <input type="number" id="calcAmount" value="1000" min="1" />
+        </div>
+        <div class="calc-field">
+          <label data-i18n="calc_token">Token</label>
+          <select id="calcToken"><option>USDC</option><option>ETH</option></select>
+        </div>
+        <button class="calc-btn" onclick="calculate()" data-i18n="calc_btn">Calculate</button>
+      </div>
+      <div class="calc-results" id="calcResults"></div>
+    </div>
+
+    <!-- PORTFOLIO TRACKER -->
+    <div class="section-label" id="portfolioLabel" style="display:none">📊 Portfolio Tracker</div>
+    <div class="portfolio-box" id="portfolioBox" style="display:none">
+      <div class="portfolio-header">
+        <div>
+          <div class="portfolio-total" id="portfolioTotal">$0.00</div>
+          <div class="portfolio-total-label">Total DeFi Balance</div>
+        </div>
+        <button onclick="refreshPortfolio()" style="background:rgba(0,82,255,0.15);border:1px solid rgba(0,82,255,0.3);color:#4d8bff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:0.78rem;">Refresh</button>
+      </div>
+      <div id="portfolioRows">
+        <div class="portfolio-empty"><div class="portfolio-icon">📊</div>Connect wallet to see your portfolio</div>
+      </div>
+    </div>
+
+    <!-- YIELD OPTIMIZER -->
+    <div class="section-label">🎯 Yield Optimizer</div>
+    <div class="optimizer-box">
+      <div class="calc-row">
+        <div class="calc-field">
+          <label>Amount to invest ($)</label>
+          <input type="number" id="optAmount" value="1000" min="1" />
+        </div>
+        <div class="calc-field">
+          <label>Token</label>
+          <select id="optToken"><option>USDC</option><option>ETH</option></select>
+        </div>
+        <div class="calc-field">
+          <label>Risk tolerance</label>
+          <select id="optRisk"><option value="low">Low only</option><option value="any" selected>Any</option></select>
+        </div>
+        <button class="calc-btn" onclick="runOptimizer()">Find Best</button>
+      </div>
+      <div class="optimizer-result" id="optimizerResult">
+        <div style="font-size:0.72rem;color:#8b8fa8;margin-bottom:4px;">Best option for you:</div>
+        <div class="optimizer-best-name" id="optBestName"></div>
+        <div class="optimizer-best-apy" id="optBestApy"></div>
+        <div class="optimizer-explanation" id="optExplanation"></div>
+        <div class="optimizer-table" id="optTable"></div>
+        <a class="opt-btn" id="optLink" href="#" target="_blank">Go to protocol →</a>
+      </div>
+    </div>
+
+    <!-- SWAP -->
+    <div class="section-label">🔄 Quick Swap</div>
+    <div class="swap-box">
+      <div class="swap-row">
+        <div class="swap-field">
+          <label>You pay</label>
+          <input type="number" id="swapAmountIn" placeholder="0.0" oninput="getSwapQuote()" />
+        </div>
+        <div class="swap-field" style="max-width:130px">
+          <label>Token</label>
+          <select id="swapTokenIn" onchange="getSwapQuote()">
+            <option value="ETH">ETH</option>
+            <option value="USDC" selected>USDC</option>
+            <option value="WETH">WETH</option>
+            <option value="AERO">AERO</option>
+          </select>
+        </div>
+        <button class="swap-arrow-btn" onclick="swapTokens()">⇄</button>
+        <div class="swap-field">
+          <label>You receive</label>
+          <input type="text" id="swapAmountOut" placeholder="0.0" readonly style="color:#00c48c" />
+        </div>
+        <div class="swap-field" style="max-width:130px">
+          <label>Token</label>
+          <select id="swapTokenOut" onchange="getSwapQuote()">
+            <option value="ETH" selected>ETH</option>
+            <option value="USDC">USDC</option>
+            <option value="WETH">WETH</option>
+            <option value="AERO">AERO</option>
+          </select>
+        </div>
+      </div>
+      <div class="swap-info" id="swapInfo"></div>
+      <button class="swap-execute-btn" id="swapBtn" onclick="executeSwap()" disabled>Connect wallet to swap</button>
+    </div>
+
+    <!-- TOP POOLS TABLE -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="section-label">🏆 Top Pools by APY</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="poolsFilter" onchange="renderTopPools()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:5px 10px;color:#fff;font-size:0.75rem;outline:none">
+          <option value="all">All pools</option>
+          <option value="low">Low risk only</option>
+          <option value="usdc">USDC only</option>
+        </select>
+      </div>
+    </div>
+    <div class="calc-box" style="padding:0;overflow:hidden;margin-bottom:24px">
+      <div id="topPoolsContainer"><div class="pools-loading">Loading top pools...</div></div>
+    </div>
+
+    <!-- PROTOCOLS -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="section-label" data-i18n="top_protocols">Top Protocols</div>
+      <span class="last-updated" id="lastUpdated2"></span>
+    </div>
+    <div id="errorMsg" style="display:none;background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.2);border-radius:8px;padding:10px 14px;color:#ff6666;font-size:0.78rem;margin-bottom:14px;" data-i18n="error_msg">Could not load live data.</div>
+
+    <div class="protocols-grid">
+      <div class="proto-card">
+        <div class="proto-header"><div class="proto-logo aave">AAVE</div><div><div class="proto-name">Aave V3</div><div class="proto-type" data-i18n="lending">Lending</div></div></div>
+        <div class="proto-apy loading" id="apy-aave">&nbsp;</div>
+        <div class="proto-apy-label" data-i18n="apy_usdc">APY on USDC</div>
+        <div class="proto-stats"><div><div class="proto-stat-label">TVL</div><div class="proto-stat-value loading" id="tvl-aave">&nbsp;</div></div><div><div class="proto-stat-label" data-i18n="network">Network</div><div class="proto-stat-value">Base</div></div></div>
+        <span class="risk-tag low" data-i18n="low_risk">Low Risk</span>
+        <a class="proto-btn" href="https://app.aave.com/?marketName=proto_base_v3" target="_blank" data-i18n="open_btn_aave">Open Aave</a>
+        <div class="proto-source"><a href="https://defillama.com" target="_blank">DeFiLlama</a></div>
+      </div>
+      <div class="proto-card">
+        <div class="proto-header"><div class="proto-logo aerodrome">AERO</div><div><div class="proto-name">Aerodrome</div><div class="proto-type" data-i18n="dex">DEX</div></div></div>
+        <div class="proto-apy loading" id="apy-aerodrome">&nbsp;</div>
+        <div class="proto-apy-label" data-i18n="apy_pools">Best pool APY</div>
+        <div class="proto-stats"><div><div class="proto-stat-label">TVL</div><div class="proto-stat-value loading" id="tvl-aerodrome">&nbsp;</div></div><div><div class="proto-stat-label" data-i18n="network">Network</div><div class="proto-stat-value">Base</div></div></div>
+        <span class="risk-tag medium" data-i18n="medium_risk">Medium Risk</span>
+        <a class="proto-btn" href="https://aerodrome.finance/liquidity" target="_blank" data-i18n="open_btn_aero">Open Aerodrome</a>
+        <div class="proto-source"><a href="https://defillama.com" target="_blank">DeFiLlama</a></div>
+      </div>
+      <div class="proto-card">
+        <div class="proto-header"><div class="proto-logo moonwell">WELL</div><div><div class="proto-name">Moonwell</div><div class="proto-type" data-i18n="lending">Lending</div></div></div>
+        <div class="proto-apy loading" id="apy-moonwell">&nbsp;</div>
+        <div class="proto-apy-label" data-i18n="apy_usdc">APY on USDC</div>
+        <div class="proto-stats"><div><div class="proto-stat-label">TVL</div><div class="proto-stat-value loading" id="tvl-moonwell">&nbsp;</div></div><div><div class="proto-stat-label" data-i18n="network">Network</div><div class="proto-stat-value">Base</div></div></div>
+        <span class="risk-tag low" data-i18n="low_risk">Low Risk</span>
+        <a class="proto-btn" href="https://moonwell.fi/markets/base" target="_blank" data-i18n="open_btn_moon">Open Moonwell</a>
+        <div class="proto-source"><a href="https://defillama.com" target="_blank">DeFiLlama</a></div>
+      </div>
+      <div class="proto-card">
+        <div class="proto-header"><div class="proto-logo compound">COMP</div><div><div class="proto-name">Compound V3</div><div class="proto-type" data-i18n="lending">Lending</div></div></div>
+        <div class="proto-apy loading" id="apy-compound">&nbsp;</div>
+        <div class="proto-apy-label" data-i18n="apy_usdc">APY on USDC</div>
+        <div class="proto-stats"><div><div class="proto-stat-label">TVL</div><div class="proto-stat-value loading" id="tvl-compound">&nbsp;</div></div><div><div class="proto-stat-label" data-i18n="network">Network</div><div class="proto-stat-value">Base</div></div></div>
+        <span class="risk-tag low" data-i18n="low_risk">Low Risk</span>
+        <a class="proto-btn" href="https://app.compound.finance/?market=usdc-basemainnet" target="_blank" data-i18n="open_btn_compound">Open Compound</a>
+        <div class="proto-source"><a href="https://defillama.com" target="_blank">DeFiLlama</a></div>
+      </div>
+      <div class="proto-card">
+        <div class="proto-header"><div class="proto-logo morpho">MRPH</div><div><div class="proto-name">Morpho Blue</div><div class="proto-type" data-i18n="lending">Lending</div></div></div>
+        <div class="proto-apy loading" id="apy-morpho">&nbsp;</div>
+        <div class="proto-apy-label" data-i18n="apy_usdc">APY on USDC</div>
+        <div class="proto-stats"><div><div class="proto-stat-label">TVL</div><div class="proto-stat-value loading" id="tvl-morpho">&nbsp;</div></div><div><div class="proto-stat-label" data-i18n="network">Network</div><div class="proto-stat-value">Base</div></div></div>
+        <span class="risk-tag low" data-i18n="low_risk">Low Risk</span>
+        <a class="proto-btn" href="https://app.morpho.org/base" target="_blank" data-i18n="open_btn_morpho">Open Morpho</a>
+        <div class="proto-source"><a href="https://defillama.com" target="_blank">DeFiLlama</a></div>
+      </div>
+      <div class="proto-card">
+        <div class="proto-header"><div class="proto-logo extra">EXTRA</div><div><div class="proto-name">Extra Finance</div><div class="proto-type" data-i18n="dex">DEX</div></div></div>
+        <div class="proto-apy loading" id="apy-extra">&nbsp;</div>
+        <div class="proto-apy-label" data-i18n="apy_pools">Best pool APY</div>
+        <div class="proto-stats"><div><div class="proto-stat-label">TVL</div><div class="proto-stat-value loading" id="tvl-extra">&nbsp;</div></div><div><div class="proto-stat-label" data-i18n="network">Network</div><div class="proto-stat-value">Base</div></div></div>
+        <span class="risk-tag medium" data-i18n="medium_risk">Medium Risk</span>
+        <a class="proto-btn" href="https://app.extrafi.io/farm" target="_blank" data-i18n="open_btn_extra">Open Extra Finance</a>
+        <div class="proto-source"><a href="https://defillama.com" target="_blank">DeFiLlama</a></div>
+      </div>
+    </div>
+
+    <div class="disclaimer" data-i18n="disclaimer">APY data is fetched live from DeFiLlama. Not financial advice. Always DYOR.</div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <!-- BASE STATS -->
+    <div class="sidebar-box">
+      <div class="sidebar-header">📊 Base Network Stats</div>
+      <div class="stat-row"><span class="stat-row-label">Total TVL</span><span class="stat-row-value" id="base-tvl">Loading...</span></div>
+      <div class="stat-row"><span class="stat-row-label">24h Volume</span><span class="stat-row-value" id="base-vol">Loading...</span></div>
+      <div class="stat-row"><span class="stat-row-label">Active Protocols</span><span class="stat-row-value">6</span></div>
+      <div class="stat-row"><span class="stat-row-label">Chain</span><span class="stat-row-value" style="color:#0052ff">Base (L2)</span></div>
+    </div>
+
+    <!-- NEWS -->
+    <div class="sidebar-box">
+      <div class="sidebar-header">📰 <span data-i18n="news_title">Base News</span></div>
+      <div id="newsFeed"><div class="news-loading">Loading news...</div></div>
+    </div>
+
+    <!-- PRICE ALERTS -->
+    <div class="sidebar-box">
+      <div class="sidebar-header">🔔 APY Alerts</div>
+      <div style="padding:14px 18px">
+        <div class="alert-form">
+          <div class="alert-row">
+            <div class="alert-field">
+              <label>Protocol</label>
+              <select id="alertProto" style="background:#12141f;color:#fff;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px;width:100%;font-family:Inter,sans-serif">
+                <option value="aave" style="background:#12141f">Aave V3</option>
+                <option value="moonwell" style="background:#12141f">Moonwell</option>
+                <option value="compound" style="background:#12141f">Compound V3</option>
+                <option value="morpho" style="background:#12141f">Morpho Blue</option>
+                <option value="aerodrome" style="background:#12141f">Aerodrome</option>
+                <option value="extra" style="background:#12141f">Extra Finance</option>
+              </select>
+            </div>
+            <div class="alert-field" style="max-width:80px">
+              <label>APY %</label>
+              <input type="number" id="alertApy" placeholder="5.0" step="0.1" />
+            </div>
+            <button class="alert-submit" onclick="addAlert()">+ Add</button>
+          </div>
+        </div>
+        <div class="alert-list" id="alertList"></div>
+      </div>
+    </div>
+
+
+
+    <!-- LINKS -->
+    <div class="sidebar-box">
+      <div class="sidebar-header">🔗 Quick Links</div>
+      <div class="news-item"><a href="https://base.org" target="_blank"><div class="news-title">Base Official Website</div><div class="news-meta">base.org</div></a></div>
+      <div class="news-item"><a href="https://bridge.base.org" target="_blank"><div class="news-title">Base Bridge</div><div class="news-meta">bridge.base.org</div></a></div>
+      <div class="news-item"><a href="https://basescan.org" target="_blank"><div class="news-title">BaseScan Explorer</div><div class="news-meta">basescan.org</div></a></div>
+      <div class="news-item"><a href="https://defillama.com/chain/Base" target="_blank"><div class="news-title">DeFiLlama Base</div><div class="news-meta">defillama.com</div></a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var i18n = {
+  en: { connect_wallet:"Connect Wallet", modal_title:"Connect Wallet", modal_subtitle:"Choose your wallet", modal_close:"Cancel", your_wallet:"Your Wallet", subtitle:"Best earning opportunities on Base network", live_data:"Live Data", top_protocols:"Top Protocols", lending:"Lending", dex:"DEX / Liquidity", apy_usdc:"APY on USDC", apy_pools:"Best pool APY", network:"Network", low_risk:"Low Risk", medium_risk:"Medium Risk", open_btn_aave:"Open Aave", open_btn_aero:"Open Aerodrome", open_btn_moon:"Open Moonwell", open_btn_compound:"Open Compound", open_btn_morpho:"Open Morpho", open_btn_extra:"Open Extra Finance", important:"Important", disclaimer:"APY data is fetched live from DeFiLlama. Not financial advice. Always DYOR.", updated:"Updated", error_msg:"Could not load live data.", calc_title:"Profit Calculator", calc_amount:"Amount ($)", calc_token:"Token", calc_btn:"Calculate", news_title:"Base News" },
+  uk: { connect_wallet:"Підключити гаманець", modal_title:"Підключити гаманець", modal_subtitle:"Оберіть гаманець", modal_close:"Скасувати", your_wallet:"Ваш гаманець", subtitle:"Найкращі можливості для заробітку на Base", live_data:"Живі дані", top_protocols:"Топ протоколи", lending:"Кредитування", dex:"DEX / Ліквідність", apy_usdc:"APY на USDC", apy_pools:"Найкращий APY", network:"Мережа", low_risk:"Низький ризик", medium_risk:"Середній ризик", open_btn_aave:"Відкрити Aave", open_btn_aero:"Відкрити Aerodrome", open_btn_moon:"Відкрити Moonwell", open_btn_compound:"Відкрити Compound", open_btn_morpho:"Відкрити Morpho", open_btn_extra:"Відкрити Extra Finance", important:"Важливо", disclaimer:"Дані APY з DeFiLlama. Не фінансова порада. Завжди DYOR.", updated:"Оновлено", error_msg:"Помилка завантаження.", calc_title:"Калькулятор прибутку", calc_amount:"Сума ($)", calc_token:"Токен", calc_btn:"Розрахувати", news_title:"Новини Base" },
+  es: { connect_wallet:"Conectar Wallet", modal_title:"Conectar Wallet", modal_subtitle:"Elige tu wallet", modal_close:"Cancelar", your_wallet:"Tu Wallet", subtitle:"Las mejores oportunidades en Base", live_data:"Datos en vivo", top_protocols:"Protocolos", lending:"Prestamos", dex:"DEX", apy_usdc:"APY USDC", apy_pools:"Mejor APY", network:"Red", low_risk:"Bajo Riesgo", medium_risk:"Riesgo Medio", open_btn_aave:"Abrir Aave", open_btn_aero:"Abrir Aerodrome", open_btn_moon:"Abrir Moonwell", open_btn_compound:"Abrir Compound", open_btn_morpho:"Abrir Morpho", open_btn_extra:"Abrir Extra Finance", important:"Importante", disclaimer:"Datos de DeFiLlama. No es consejo financiero.", updated:"Actualizado", error_msg:"Error al cargar.", calc_title:"Calculadora", calc_amount:"Cantidad ($)", calc_token:"Token", calc_btn:"Calcular", news_title:"Noticias Base" },
+  fr: { connect_wallet:"Connecter", modal_title:"Connecter Wallet", modal_subtitle:"Choisissez votre wallet", modal_close:"Annuler", your_wallet:"Votre Wallet", subtitle:"Meilleures opportunites sur Base", live_data:"En direct", top_protocols:"Protocoles", lending:"Pret", dex:"DEX", apy_usdc:"APY USDC", apy_pools:"Meilleur APY", network:"Reseau", low_risk:"Faible Risque", medium_risk:"Risque Moyen", open_btn_aave:"Ouvrir Aave", open_btn_aero:"Ouvrir Aerodrome", open_btn_moon:"Ouvrir Moonwell", open_btn_compound:"Ouvrir Compound", open_btn_morpho:"Ouvrir Morpho", open_btn_extra:"Ouvrir Extra Finance", important:"Important", disclaimer:"Donnees de DeFiLlama. Pas un conseil financier.", updated:"Mis a jour", error_msg:"Erreur de chargement.", calc_title:"Calculateur", calc_amount:"Montant ($)", calc_token:"Token", calc_btn:"Calculer", news_title:"Actualites Base" },
+  de: { connect_wallet:"Verbinden", modal_title:"Wallet verbinden", modal_subtitle:"Wahlen Sie Ihr Wallet", modal_close:"Abbrechen", your_wallet:"Ihr Wallet", subtitle:"Beste Verdienstmoeglichkeiten auf Base", live_data:"Live", top_protocols:"Protokolle", lending:"Leihen", dex:"DEX", apy_usdc:"APY USDC", apy_pools:"Bester APY", network:"Netzwerk", low_risk:"Geringes Risiko", medium_risk:"Mittleres Risiko", open_btn_aave:"Aave oeffnen", open_btn_aero:"Aerodrome oeffnen", open_btn_moon:"Moonwell oeffnen", open_btn_compound:"Compound oeffnen", open_btn_morpho:"Morpho oeffnen", open_btn_extra:"Extra Finance oeffnen", important:"Wichtig", disclaimer:"Daten von DeFiLlama. Keine Finanzberatung.", updated:"Aktualisiert", error_msg:"Fehler beim Laden.", calc_title:"Rechner", calc_amount:"Betrag ($)", calc_token:"Token", calc_btn:"Berechnen", news_title:"Base Nachrichten" },
+  pt: { connect_wallet:"Conectar", modal_title:"Conectar Carteira", modal_subtitle:"Escolha sua carteira", modal_close:"Cancelar", your_wallet:"Sua Carteira", subtitle:"Melhores oportunidades na Base", live_data:"Ao vivo", top_protocols:"Protocolos", lending:"Emprestimos", dex:"DEX", apy_usdc:"APY USDC", apy_pools:"Melhor APY", network:"Rede", low_risk:"Baixo Risco", medium_risk:"Risco Medio", open_btn_aave:"Abrir Aave", open_btn_aero:"Abrir Aerodrome", open_btn_moon:"Abrir Moonwell", open_btn_compound:"Abrir Compound", open_btn_morpho:"Abrir Morpho", open_btn_extra:"Abrir Extra Finance", important:"Importante", disclaimer:"Dados do DeFiLlama. Nao e conselho financeiro.", updated:"Atualizado", error_msg:"Erro ao carregar.", calc_title:"Calculadora", calc_amount:"Valor ($)", calc_token:"Token", calc_btn:"Calcular", news_title:"Noticias Base" }
+};
+
+var currentLang = "en";
+var liveAPY = { aave:3.1, aerodrome:25, moonwell:5.8, compound:4.5, morpho:6.2, extra:20 };
+var alerts = [];
+try { alerts = JSON.parse(localStorage.getItem("apyAlerts")||"[]"); } catch(e) {}
+
+function toggleLang() { document.getElementById("langWrapper").classList.toggle("open"); }
+function setLang(lang, code, el) {
+  currentLang = lang;
+  var t = i18n[lang];
+  if (!t) return;
+  document.querySelectorAll("[data-i18n]").forEach(function(n) {
+    var k = n.getAttribute("data-i18n");
+    if (t[k] !== undefined) n.textContent = t[k];
+  });
+  document.getElementById("currentLang").textContent = code;
+  document.querySelectorAll(".lang-option").forEach(function(o) { o.classList.remove("active"); });
+  if (el) el.classList.add("active");
+  document.documentElement.lang = lang;
+  document.getElementById("langWrapper").classList.remove("open");
+}
+document.addEventListener("click", function(e) {
+  var w = document.getElementById("langWrapper");
+  if (w && !w.contains(e.target)) w.classList.remove("open");
+});
+
+function openWalletModal() { document.getElementById("walletModal").classList.add("show"); }
+function closeWalletModal() { document.getElementById("walletModal").classList.remove("show"); }
+document.addEventListener("DOMContentLoaded", function() {
+  var m = document.getElementById("walletModal");
+  if (m) m.addEventListener("click", function(e) { if (e.target===m) closeWalletModal(); });
+});
+
+function loadScript(src) {
+  return new Promise(function(res, rej) {
+    if (document.querySelector('script[src="'+src+'"]')) return res();
+    var s = document.createElement("script"); s.src=src; s.onload=res; s.onerror=rej;
+    document.head.appendChild(s);
+  });
+}
+
+async function connectMetaMask() {
+  closeWalletModal();
+  if (!window.ethereum) { alert("MetaMask not found!"); return; }
+  try { var a = await window.ethereum.request({method:"eth_requestAccounts"}); handleWallet(a[0]); } catch(e) {}
+}
+async function connectCoinbase() {
+  closeWalletModal();
+  if (window.ethereum) { try { var a = await window.ethereum.request({method:"eth_requestAccounts"}); handleWallet(a[0]); } catch(e) {} }
+  else alert("Open in Coinbase Wallet browser.");
+}
+async function connectWalletConnect() {
+  closeWalletModal();
+  try {
+    await loadScript("https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js");
+    await loadScript("https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js");
+    var p = new WalletConnectProvider.default({rpc:{8453:"https://mainnet.base.org"},chainId:8453});
+    await p.enable();
+    var w = new Web3(p); var a = await w.eth.getAccounts();
+    if (a.length) { handleWallet(a[0]); p.on("disconnect", disconnectWallet); }
+  } catch(e) { console.log("WC:",e); }
+}
+async function connectBaseApp() {
+  closeWalletModal();
+  try {
+    await loadScript("https://cdn.jsdelivr.net/npm/@coinbase/wallet-sdk@3.9.3/dist/browser/CoinbaseWalletSDK.umd.js");
+    var sdk = new CoinbaseWalletSDK({appName:"Base DeFi Dashboard", darkMode:true});
+    var p = sdk.makeWeb3Provider("https://mainnet.base.org", 8453);
+    var a = await p.request({method:"eth_requestAccounts"});
+    if (a && a.length) handleWallet(a[0]);
+  } catch(e) { if (e.code!==4001) connectCoinbase(); }
+}
+
+async function handleWallet(addr) {
+  var short = addr.slice(0,6)+"..."+addr.slice(-4);
+  var btn = document.getElementById("walletBtn");
+  btn.innerHTML = "<span class='wallet-dot'></span> "+short+" <span style='font-size:0.7rem;opacity:0.7'>▼</span>";
+  btn.classList.add("connected");
+  btn.title = "Click to disconnect";
+  btn.onclick = function() { showWalletMenu(addr, short); };
+  var el = document.getElementById("walletAddress"); if (el) el.textContent = addr;
+  document.getElementById("walletPanel").classList.add("show");
+  try {
+    var b = await window.ethereum.request({method:"eth_getBalance",params:[addr,"latest"]});
+    var eth = (parseInt(b,16)/1e18).toFixed(4);
+    document.getElementById("bal-eth").textContent = eth+" ETH";
+  } catch(e) { document.getElementById("bal-eth").textContent = "N/A"; }
+}
+
+function showWalletMenu(addr, short) {
+  var existing = document.getElementById("walletMenu");
+  if (existing) { existing.remove(); return; }
+  var menu = document.createElement("div");
+  menu.id = "walletMenu";
+  menu.setAttribute("style", "position:fixed;top:70px;right:16px;background:#12141f;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:8px;z-index:9999;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.5)");
+
+  var header = document.createElement("div");
+  header.setAttribute("style", "padding:8px 12px;font-size:0.78rem;color:#8b8fa8;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:4px");
+  header.innerHTML = "<div style='font-weight:600;color:#fff;margin-bottom:2px'>Connected</div><div style='font-family:monospace;font-size:0.72rem'>" + addr.slice(0,10) + "..." + addr.slice(-6) + "</div>";
+
+  var copyBtn = document.createElement("div");
+  copyBtn.setAttribute("style", "padding:10px 12px;font-size:0.85rem;cursor:pointer;border-radius:8px");
+  copyBtn.textContent = "📋 Copy Address";
+  copyBtn.onmouseover = function(){this.style.background="rgba(255,255,255,0.05)";};
+  copyBtn.onmouseout = function(){this.style.background="";};
+  copyBtn.onclick = function(){copyAddr();};
+
+  var scanLink = document.createElement("a");
+  scanLink.href = "https://basescan.org/address/" + addr;
+  scanLink.target = "_blank";
+  scanLink.setAttribute("style", "display:block;padding:10px 12px;font-size:0.85rem;color:#fff;text-decoration:none;border-radius:8px");
+  scanLink.textContent = "🔍 View on BaseScan";
+  scanLink.onmouseover = function(){this.style.background="rgba(255,255,255,0.05)";};
+  scanLink.onmouseout = function(){this.style.background="";};
+
+  var discBtn = document.createElement("div");
+  discBtn.setAttribute("style", "padding:10px 12px;font-size:0.85rem;cursor:pointer;color:#ff6666;border-top:1px solid rgba(255,255,255,0.07);margin-top:4px;border-radius:8px");
+  discBtn.textContent = "🔌 Disconnect";
+  discBtn.onmouseover = function(){this.style.background="rgba(255,68,68,0.1)";};
+  discBtn.onmouseout = function(){this.style.background="";};
+  discBtn.onclick = function(){disconnectWallet();};
+
+  menu.appendChild(header);
+  menu.appendChild(copyBtn);
+  menu.appendChild(scanLink);
+  menu.appendChild(discBtn);
+  document.body.appendChild(menu);
+  window._currentAddr = addr;
+
+  setTimeout(function() {
+    document.addEventListener("click", function cl(e) {
+      if (!menu.contains(e.target) && document.getElementById("walletBtn") !== e.target) {
+        menu.remove(); document.removeEventListener("click", cl);
+      }
+    });
+  }, 100);
+}
+
+
+function copyAddr() {
+  navigator.clipboard.writeText(window._currentAddr||"").then(function(){
+    var m = document.getElementById("walletMenu"); if(m) m.remove();
+  });
+}
+
+function disconnectWallet() {
+  var m = document.getElementById("walletMenu"); if(m) m.remove();
+  var btn = document.getElementById("walletBtn");
+  var t = i18n[currentLang];
+  btn.innerHTML = "🔗 <span data-i18n='connect_wallet'>"+(t?t.connect_wallet:"Connect Wallet")+"</span>";
+  btn.title = "";
+  btn.classList.remove("connected");
+  btn.onclick = openWalletModal;
+  document.getElementById("walletPanel").classList.remove("show");
+  window._walletAddr = null;
+}
+
+function calculate() {
+  var amt = parseFloat(document.getElementById("calcAmount").value)||0;
+  if (amt<=0) return;
+  var protos = [
+    {name:"Aave V3", apy:liveAPY.aave},
+    {name:"Aerodrome", apy:liveAPY.aerodrome},
+    {name:"Moonwell", apy:liveAPY.moonwell},
+    {name:"Compound V3", apy:liveAPY.compound},
+    {name:"Morpho Blue", apy:liveAPY.morpho},
+    {name:"Extra Finance", apy:liveAPY.extra}
+  ];
+  var max = Math.max.apply(null, protos.map(function(p){return p.apy;}));
+  document.getElementById("calcResults").innerHTML = protos.map(function(p) {
+    var mo = (amt*p.apy/100/12).toFixed(2);
+    var yr = (amt*p.apy/100).toFixed(2);
+    var best = p.apy===max;
+    return "<div class='calc-card"+(best?" best":"")+"'><div class='calc-card-name'>"+p.name+(best?" <span class='best-tag'>Best</span>":"")+"</div><div class='calc-monthly'>+$"+mo+"<span style='font-size:0.7rem;color:#8b8fa8'>/mo</span></div><div class='calc-yearly'>$"+yr+"/yr at "+p.apy.toFixed(1)+"%</div></div>";
+  }).join("");
+}
+
+var POOLS = { aave:"7e0661bf-8cf3-45e6-9424-31916d4c7b84", moonwell:"5836a068-0d5c-4678-9381-99c8ec29ef1f", morpho:"1643c124-f047-4fc5-9642-d6fa91875184" };
+function fmt(v) { return v?"~"+v.toFixed(1)+"%":"N/A"; }
+function fmtTVL(v) { if (!v) return "N/A"; if (v>=1e9) return "$"+(v/1e9).toFixed(1)+"B"; if (v>=1e6) return "$"+(v/1e6).toFixed(0)+"M"; return "$"+Math.round(v); }
+function clr(id) { var e=document.getElementById(id); if(e) e.classList.remove("loading"); }
+function setCard(k, data, fa, fb) {
+  clr("apy-"+k); clr("tvl-"+k);
+  document.getElementById("apy-"+k).textContent = data ? fmt(data.apy) : fa;
+  document.getElementById("tvl-"+k).textContent = data ? fmtTVL(data.tvlUsd) : fb;
+  if (data && data.apy) liveAPY[k] = data.apy;
+}
+
+function fpools(proj, usdc) {
+  return fetchWithProxy("https://yields.llama.fi/pools").then(function(j){
+    var ps = j.data.filter(function(p){ return p.project===proj && p.chain==="Base" && (p.tvlUsd||0)>100000 && (p.apy||0)>0; });
+    if (usdc) ps = ps.filter(function(p){return (p.symbol||"").toUpperCase().includes("USDC");});
+    ps.sort(function(a,b){return (b.apy||0)-(a.apy||0);});
+    if (!ps.length) throw new Error("none");
+    return {apy:ps[0].apy, tvlUsd:ps[0].tvlUsd, symbol:ps[0].symbol};
+  });
+}
+var _proxyList = [
+  function(u) { return fetch(u); },
+  function(u) { return fetch("https://corsproxy.io/?"+encodeURIComponent(u)); },
+  function(u) { return fetch("https://api.allorigins.win/raw?url="+encodeURIComponent(u)); },
+];
+var _proxyIdx = 0;
+
+function fetchWithProxy(url) {
+  var tryFetch = function(idx) {
+    if (idx >= _proxyList.length) return Promise.reject(new Error("All failed"));
+    return _proxyList[idx](url)
+      .then(function(r) {
+        if (!r.ok) throw new Error("HTTP "+r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        _proxyIdx = idx; // remember working proxy
+        return data;
+      })
+      .catch(function(e) {
+        return tryFetch(idx + 1);
+      });
+  };
+  return tryFetch(_proxyIdx);
+}
+
+function fchart(id) {
+  return fetchWithProxy("https://yields.llama.fi/chart/"+id).then(function(j){
+    var l=j.data[j.data.length-1]; return {apy:l.apy,tvlUsd:l.tvlUsd};
+  });
+}
+
+function timeAgo(dateStr) {
+  var diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+  if (diff < 3600) return Math.floor(diff/60)+"m ago";
+  if (diff < 86400) return Math.floor(diff/3600)+"h ago";
+  return Math.floor(diff/86400)+"d ago";
+}
+
+function fetchNews() {
+  var feed = document.getElementById("newsFeed");
+  feed.innerHTML = "<div class='news-loading'>Loading news...</div>";
+
+  // Use rss2json to fetch Base blog RSS
+  var rssUrl = "https://api.rss2json.com/v1/api.json?rss_url=https://base.mirror.xyz/feed&count=8";
+
+  fetch(rssUrl)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.items || !data.items.length) throw new Error("no items");
+      var html = data.items.map(function(item) {
+        var time = item.pubDate ? timeAgo(item.pubDate) : "";
+        var title = item.title || "Base Update";
+        var url = item.link || "https://base.mirror.xyz";
+        return "<div class='news-item'><a href='"+url+"' target='_blank'>" +
+          "<div class='news-title'>"+title+"</div>" +
+          "<div class='news-meta'><span>base.mirror.xyz</span><span class='news-dot'></span><span>"+time+"</span></div>" +
+          "</a></div>";
+      }).join("");
+      feed.innerHTML = html;
+    })
+    .catch(function() {
+      // Fallback: try Coinbase blog
+      var rssUrl2 = "https://api.rss2json.com/v1/api.json?rss_url=https://www.coinbase.com/blog/landing-page.rss&count=6";
+      fetch(rssUrl2)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.items || !data.items.length) throw new Error("no items");
+          var filtered = data.items.filter(function(i) {
+            return i.title && (i.title.toLowerCase().includes("base") || i.title.toLowerCase().includes("defi") || i.title.toLowerCase().includes("crypto"));
+          }).slice(0, 6);
+          if (!filtered.length) filtered = data.items.slice(0, 6);
+          var html = filtered.map(function(item) {
+            var time = item.pubDate ? timeAgo(item.pubDate) : "";
+            return "<div class='news-item'><a href='"+(item.link||"https://coinbase.com/blog")+"' target='_blank'>" +
+              "<div class='news-title'>"+(item.title||"Coinbase Update")+"</div>" +
+              "<div class='news-meta'><span>coinbase.com</span><span class='news-dot'></span><span>"+time+"</span></div>" +
+              "</a></div>";
+          }).join("");
+          feed.innerHTML = html;
+        })
+        .catch(function() {
+          // Static fallback
+          var fallback = [
+            {title:"Base ecosystem continues rapid growth", time:"2h ago", url:"https://base.org/blog"},
+            {title:"Aerodrome leading DEX volume on Base", time:"6h ago", url:"https://aerodrome.finance"},
+            {title:"Moonwell USDC market hits new ATH", time:"1d ago", url:"https://moonwell.fi"},
+            {title:"Morpho optimizes lending rates on Base", time:"2d ago", url:"https://morpho.org"},
+            {title:"Base developer activity hits all-time high", time:"3d ago", url:"https://base.org"},
+          ];
+          feed.innerHTML = fallback.map(function(n) {
+            return "<div class='news-item'><a href='"+n.url+"' target='_blank'><div class='news-title'>"+n.title+"</div><div class='news-meta'><span>Base News</span><span class='news-dot'></span><span>"+n.time+"</span></div></a></div>";
+          }).join("");
+        });
+    });
+}
+
+// Auto-refresh news every 5 minutes
+setInterval(fetchNews, 5 * 60 * 1000);
+
+function fetchBaseTVL() {
+  fetchWithProxy("https://api.llama.fi/v2/chains").then(function(data){
+    var base = data.find(function(c){return c.name==="Base";});
+    if (base) {
+      var tvl = base.tvl;
+      document.getElementById("base-tvl").textContent = tvl>=1e9?"$"+(tvl/1e9).toFixed(2)+"B":"$"+(tvl/1e6).toFixed(0)+"M";
+    }
+  }).catch(function(){
+    document.getElementById("base-tvl").textContent = "~$3.2B";
+  });
+  document.getElementById("base-vol").textContent = "~$800M";
+}
+
+function fetchData() {
+  Promise.allSettled([
+    fchart(POOLS.aave),
+    fpools("aerodrome-finance", false),
+    fchart(POOLS.moonwell),
+    fpools("compound-v3", true),
+    fchart(POOLS.morpho),
+    fpools("extra-finance", false)
+  ]).then(function(r) {
+    setCard("aave", r[0].status==="fulfilled"?r[0].value:null, "~3.1%", "$30M");
+    setCard("aerodrome", r[1].status==="fulfilled"?r[1].value:null, "~15-80%", "$400M+");
+    setCard("moonwell", r[2].status==="fulfilled"?r[2].value:null, "~5.8%", "$120M+");
+    setCard("compound", r[3].status==="fulfilled"?r[3].value:null, "~4.5%", "$50M+");
+    setCard("morpho", r[4].status==="fulfilled"?r[4].value:null, "~6.2%", "$200M+");
+    setCard("extra", r[5].status==="fulfilled"?r[5].value:null, "~20%", "$30M+");
+    if (r[1].status==="fulfilled" && r[1].value.symbol) {
+      var el = document.querySelector("[data-i18n='apy_pools']");
+      if (el) el.textContent = "Top: "+r[1].value.symbol;
+    }
+    calculate();
+    var now = new Date();
+    var upd = (i18n[currentLang]?i18n[currentLang].updated:"Updated")+": "+now.toLocaleTimeString();
+    var e1=document.getElementById("lastUpdated"); if(e1) e1.textContent=upd;
+    var e2=document.getElementById("lastUpdated2"); if(e2) e2.textContent=upd;
+  });
+}
+
+// ---- PORTFOLIO TRACKER ----
+var USDC_CONTRACT = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+var AAVE_POOL = "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5";
+
+async function refreshPortfolio() {
+  if (!window._walletAddr) return;
+  var addr = window._walletAddr;
+  var rows = [];
+  var total = 0;
+
+  // Check ETH balance
+  try {
+    var b = await window.ethereum.request({method:"eth_getBalance",params:[addr,"latest"]});
+    var eth = parseInt(b,16)/1e18;
+    // Get ETH price approx
+    var ethPrice = 3500;
+    var val = eth * ethPrice;
+    total += val;
+    rows.push({proto:"ETH Balance", balance:eth.toFixed(4)+" ETH", value:"$"+val.toFixed(2), earned:"", color:"#627eea"});
+  } catch(e) {}
+
+  // Check USDC balance via eth_call
+  try {
+    var data = "0x70a08231000000000000000000000000"+addr.slice(2).padStart(64,"0");
+    var result = await window.ethereum.request({method:"eth_call",params:[{to:USDC_CONTRACT,data:data},"latest"]});
+    var usdc = parseInt(result,16)/1e6;
+    total += usdc;
+    rows.push({proto:"USDC Balance", balance:usdc.toFixed(2)+" USDC", value:"$"+usdc.toFixed(2), earned:"", color:"#2775ca"});
+  } catch(e) {
+    rows.push({proto:"USDC Balance", balance:"0.00 USDC", value:"$0.00", earned:"Switch to Base network", color:"#2775ca"});
+  }
+
+  document.getElementById("portfolioTotal").textContent = "$"+total.toFixed(2);
+
+  // Always show rows (ETH + USDC always present)
+  if (!rows.length) {
+    document.getElementById("portfolioRows").innerHTML = "<div class='portfolio-empty'><div class='portfolio-icon'>📊</div>Make sure your wallet is connected to Base network</div>";
+    return;
+  }
+
+  document.getElementById("portfolioRows").innerHTML = rows.map(function(r) {
+    return "<div class='portfolio-row'>" +
+      "<div style='width:10px;height:10px;border-radius:50%;background:"+r.color+";flex-shrink:0'></div>" +
+      "<div class='portfolio-proto'>"+r.proto+"</div>" +
+      "<div><div class='portfolio-balance'>"+r.balance+"</div>" +
+      "<div class='portfolio-earned'>"+r.value+"</div></div>" +
+      "</div>";
+  }).join("");
+}
+
+// Show portfolio when wallet connected
+var _origHandleWallet = handleWallet;
+handleWallet = async function(addr) {
+  window._walletAddr = addr;
+  await _origHandleWallet(addr);
+  document.getElementById("portfolioLabel").style.display = "block";
+  document.getElementById("portfolioBox").style.display = "block";
+  document.getElementById("swapBtn").disabled = false;
+  document.getElementById("swapBtn").textContent = "Swap tokens";
+  refreshPortfolio();
+};
+
+// ---- YIELD OPTIMIZER ----
+function runOptimizer() {
+  var amt = parseFloat(document.getElementById("optAmount").value)||1000;
+  var risk = document.getElementById("optRisk").value;
+
+  var protos = [
+    {name:"Aave V3", apy:liveAPY.aave, risk:"low", url:"https://app.aave.com/?marketName=proto_base_v3", reason:"Largest TVL, battle-tested, best for safety"},
+    {name:"Aerodrome", apy:liveAPY.aerodrome, risk:"medium", url:"https://aerodrome.finance/liquidity", reason:"Highest yields but requires active management of LP positions"},
+    {name:"Moonwell", apy:liveAPY.moonwell, risk:"low", url:"https://moonwell.fi/markets/base", reason:"Simple lending, WELL token rewards, audited"},
+    {name:"Compound V3", apy:liveAPY.compound, risk:"low", url:"https://app.compound.finance/?market=usdc-basemainnet", reason:"Battle-tested protocol, conservative yields"},
+    {name:"Morpho Blue", apy:liveAPY.morpho, risk:"low", url:"https://app.morpho.org/base", reason:"Optimized rates on top of Aave/Compound"},
+    {name:"Extra Finance", apy:liveAPY.extra, risk:"medium", url:"https://app.extrafi.io/farm", reason:"Leveraged farming, higher risk but better yields"}
+  ];
+
+  var filtered = risk==="low" ? protos.filter(function(p){return p.risk==="low";}) : protos;
+  filtered.sort(function(a,b){return b.apy-a.apy;});
+  var best = filtered[0];
+
+  document.getElementById("optBestName").textContent = best.name;
+  document.getElementById("optBestApy").textContent = "~"+best.apy.toFixed(1)+"% APY";
+  document.getElementById("optExplanation").textContent = best.reason+" — with $"+amt.toLocaleString()+" you earn ~$"+(amt*best.apy/100/12).toFixed(2)+"/month";
+  document.getElementById("optLink").href = best.url;
+
+  var tableHTML = filtered.map(function(p, i) {
+    var monthly = (amt*p.apy/100/12).toFixed(2);
+    return "<div class='optimizer-row'>" +
+      "<span class='optimizer-rank'>"+(i+1)+"</span>" +
+      "<span class='optimizer-name'>"+p.name+"</span>" +
+      "<span class='optimizer-apy-val'>"+p.apy.toFixed(1)+"%</span>" +
+      "<span class='optimizer-profit'>+$"+monthly+"/mo</span>" +
+      "</div>";
+  }).join("");
+  document.getElementById("optTable").innerHTML = tableHTML;
+  document.getElementById("optimizerResult").classList.add("show");
+}
+
+// ---- SWAP ----
+var swapQuoteTimer = null;
+var swapRates = { ETH:3500, USDC:1, WETH:3500, AERO:1.2 };
+
+// Token addresses on Base
+var TOKEN_ADDRS = {
+  "ETH":  "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+  "USDC": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "WETH": "0x4200000000000000000000000000000000000006",
+  "AERO": "0x940181a94A35A4569E4529A3CDfB74e38FD98631",
+  "CBBTC":"0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf"
+};
+
+var TOKEN_DECIMALS = { "ETH":18, "USDC":6, "WETH":18, "AERO":18, "CBBTC":8 };
+
+// YOUR affiliate wallet — отримуєш 0.15% від кожного свапу
+var AFFILIATE_WALLET = "0xdf1496a7d0fe0fe557d41d2d5ea7e64ac15d032e";
+var AFFILIATE_FEE = "15"; // 0.15% in basis points
+
+// Base Builder Code — для отримання атрибуції і винагород
+var BUILDER_CODE = "bc_xxmfe93e";
+var BUILDER_CODE_HEX = "0x" + Array.from("bc_xxmfe93e").map(c => c.charCodeAt(0).toString(16).padStart(2,"0")).join("");
+
+var swapQuoteTimer = null;
+var currentQuote = null;
+
+function swapTokens() {
+  var inSel = document.getElementById("swapTokenIn");
+  var outSel = document.getElementById("swapTokenOut");
+  var tmp = inSel.value;
+  inSel.value = outSel.value;
+  outSel.value = tmp;
+  getSwapQuote();
+}
+
+function getSwapQuote() {
+  clearTimeout(swapQuoteTimer);
+  swapQuoteTimer = setTimeout(function() {
+    var amtIn = parseFloat(document.getElementById("swapAmountIn").value)||0;
+    var tokenIn = document.getElementById("swapTokenIn").value;
+    var tokenOut = document.getElementById("swapTokenOut").value;
+    var outEl = document.getElementById("swapAmountOut");
+    var info = document.getElementById("swapInfo");
+    var btn = document.getElementById("swapBtn");
+
+    if (amtIn <= 0 || tokenIn === tokenOut) {
+      outEl.value = "";
+      info.classList.remove("show");
+      return;
+    }
+
+    // Use estimated rates for display
+    var rates = {"ETH":3500,"USDC":1,"WETH":3500,"AERO":1.2,"CBBTC":105000};
+    var valueIn = amtIn * (rates[tokenIn]||1);
+    var amtOut = valueIn / (rates[tokenOut]||1);
+    outEl.value = amtOut.toFixed(6);
+
+    var affiliateFeeAmt = (amtIn * 0.0015).toFixed(4);
+    info.innerHTML = "Estimated rate via 0x Protocol" +
+      " &nbsp;|&nbsp; ~" + amtOut.toFixed(4) + " " + tokenOut +
+      " &nbsp;|&nbsp; <span style='color:#00c48c'>0.15% fee to dashboard</span>";
+    info.classList.add("show");
+
+    if (window._walletAddr) {
+      btn.disabled = false;
+      btn.textContent = "Swap " + tokenIn + " → " + tokenOut;
+    }
+  }, 300);
+}
+
+async function executeSwap() {
+  if (!window._walletAddr) { openWalletModal(); return; }
+  var amtIn = parseFloat(document.getElementById("swapAmountIn").value)||0;
+  var tokenIn = document.getElementById("swapTokenIn").value;
+  var tokenOut = document.getElementById("swapTokenOut").value;
+
+  if (amtIn <= 0) { alert("Enter amount to swap"); return; }
+  if (tokenIn === tokenOut) { alert("Select different tokens"); return; }
+
+  var btn = document.getElementById("swapBtn");
+  btn.disabled = true;
+  btn.textContent = "Getting quote...";
+
+  var decimals = TOKEN_DECIMALS[tokenIn] || 18;
+  var sellAmount = Math.floor(amtIn * Math.pow(10, decimals)).toString();
+  var sellToken = TOKEN_ADDRS[tokenIn];
+  var buyToken = TOKEN_ADDRS[tokenOut];
+
+  try {
+    // Call Netlify proxy function (avoids CORS — 0x blocks direct browser requests)
+    var proxyUrl = "/.netlify/functions/swap-quote" +
+      "?sellToken=" + sellToken +
+      "&buyToken=" + buyToken +
+      "&sellAmount=" + sellAmount +
+      "&taker=" + window._walletAddr +
+      "&affiliateAddress=" + AFFILIATE_WALLET +
+      "&affiliateFee=" + AFFILIATE_FEE;
+
+    var res = await fetch(proxyUrl);
+
+    if (!res.ok) {
+      var errText = await res.text();
+      throw new Error("Quote error " + res.status + ": " + errText);
+    }
+
+    var quote = await res.json();
+
+    if (quote.transaction && quote.transaction.to) {
+      var tx = quote.transaction;
+
+      // Add Builder Code to transaction data
+      var txData = tx.data || "0x";
+      if (typeof BUILDER_CODE_HEX !== "undefined" && txData.length > 2) {
+        txData = txData + BUILDER_CODE_HEX.slice(2);
+      }
+
+      // Check if permit2 signature needed (for ERC20 tokens)
+      if (quote.permit2 && quote.permit2.eip712) {
+        var sig = await window.ethereum.request({
+          method: "eth_signTypedData_v4",
+          params: [window._walletAddr, JSON.stringify(quote.permit2.eip712)]
+        });
+        txData = txData + sig.slice(2);
+      }
+
+      // Parse value safely — may come as hex string or decimal string
+      var txValue = tx.value || "0";
+      var txValueHex = txValue.startsWith("0x")
+        ? txValue
+        : "0x" + (parseInt(txValue) || 0).toString(16);
+
+      // Parse gas safely
+      var txGas = tx.gas || "300000";
+      var txGasInt = txGas.startsWith("0x") ? parseInt(txGas, 16) : parseInt(txGas);
+      var txGasHex = "0x" + Math.floor((txGasInt || 300000) * 1.2).toString(16);
+
+      var txHash = await window.ethereum.request({
+        method: "eth_sendTransaction",
+        params: [{
+          from: window._walletAddr,
+          to: tx.to,
+          data: txData,
+          value: txValueHex,
+          gas: txGasHex
+        }]
+      });
+
+      btn.textContent = "Swap sent! ✅";
+      btn.disabled = false;
+      var info = document.getElementById("swapInfo");
+      if (info) {
+        info.innerHTML = "✅ Transaction sent! <a href='https://basescan.org/tx/"+txHash+"' target='_blank' style='color:#4d8bff'>View on BaseScan →</a>";
+        info.classList.add("show");
+      }
+    } else {
+      throw new Error(quote.reason || "No transaction data");
+    }
+  } catch(e) {
+    console.error("Swap error:", e);
+    btn.disabled = false;
+    btn.textContent = "Swap " + tokenIn + " → " + tokenOut;
+    if (e.code === 4001) return; // User rejected
+    // Fallback to Aerodrome
+    if (confirm("Direct swap failed. Open Aerodrome instead?")) {
+      window.open("https://aerodrome.finance/swap?from="+tokenIn+"&to="+tokenOut, "_blank");
+    }
+  }
+}
+
+// ---- TOP POOLS ----
+var allPools = [];
+function fetchTopPools() {
+  fetchWithProxy("https://yields.llama.fi/pools").then(function(j){
+    allPools = j.data.filter(function(p){ return p.chain==="Base"&&(p.tvlUsd||0)>500000&&(p.apy||0)>0&&(p.apy||0)<500; }).sort(function(a,b){return (b.apy||0)-(a.apy||0);});
+    renderTopPools();
+  }).catch(function(){ document.getElementById("topPoolsContainer").innerHTML="<div class='pools-loading'>Could not load pools</div>"; });
+}
+function renderTopPools() {
+  var filter = document.getElementById("poolsFilter")?document.getElementById("poolsFilter").value:"all";
+  var filtered = allPools;
+  if (filter==="usdc") filtered=allPools.filter(function(p){return (p.symbol||"").toUpperCase().includes("USDC");});
+  if (filter==="low") filtered=allPools.filter(function(p){return ["aave-v3","moonwell","compound-v3","morpho-blue"].includes(p.project);});
+  var top=filtered.slice(0,10);
+  if (!top.length){document.getElementById("topPoolsContainer").innerHTML="<div class='pools-loading'>No pools found</div>";return;}
+  var links={"aave-v3":"https://app.aave.com/?marketName=proto_base_v3","aerodrome-finance":"https://aerodrome.finance/liquidity","moonwell":"https://moonwell.fi/markets/base","compound-v3":"https://app.compound.finance/?market=usdc-basemainnet","morpho-blue":"https://app.morpho.org/base","extra-finance":"https://app.extrafi.io/farm"};
+  var html="<table class='pools-table'><thead><tr><th>#</th><th>Pool</th><th>Protocol</th><th>APY</th><th>TVL</th><th>Risk</th><th></th></tr></thead><tbody>";
+  top.forEach(function(p,i){
+    var low=["aave-v3","moonwell","compound-v3","morpho-blue"].includes(p.project);
+    var risk=low?"<span class='pool-risk-low'>Low</span>":"<span class='pool-risk-med'>Medium</span>";
+    var url=links[p.project]||"https://defillama.com/yields/pool/"+p.pool;
+    html+="<tr><td class='pool-rank'>"+(i+1)+"</td><td><div class='pool-name'>"+(p.symbol||"").slice(0,20)+"</div></td><td><div class='pool-proto'>"+(p.project||"")+"</div></td><td class='pool-apy-val'>"+((p.apy||0).toFixed(1))+"%</td><td class='pool-tvl-val'>"+fmtTVL(p.tvlUsd)+"</td><td>"+risk+"</td><td><a class='pool-link' href='"+url+"' target='_blank'>Open</a></td></tr>";
+  });
+  html+="</tbody></table>";
+  document.getElementById("topPoolsContainer").innerHTML=html;
+}
+setInterval(fetchTopPools, 3*60*1000);
+
+// ---- PWA ----
+var deferredPrompt=null;
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();deferredPrompt=e;document.getElementById("pwaBanner").classList.add("show");});
+function installPWA(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(function(r){if(r.outcome==="accepted")document.getElementById("pwaBanner").classList.remove("show");deferredPrompt=null;});}}
+function dismissPWA(){document.getElementById("pwaBanner").classList.remove("show");}
+function createManifest(){var m={name:"Base DeFi Dashboard",short_name:"BaseDeFi",start_url:"/",display:"standalone",background_color:"#080a12",theme_color:"#0052ff",icons:[{src:"https://base.org/favicon.ico",sizes:"192x192",type:"image/x-icon"}]};var b=new Blob([JSON.stringify(m)],{type:"application/json"});var u=URL.createObjectURL(b);var l=document.querySelector('link[rel="manifest"]');if(l)l.href=u;}
+
+// ---- SHARE ----
+function sharePortfolio(){
+  var lines = [
+    "Base DeFi Dashboard - Live APYs:",
+    "",
+    "Aerodrome: "+liveAPY.aerodrome.toFixed(1)+"%",
+    "Extra Finance: "+liveAPY.extra.toFixed(1)+"%",
+    "Morpho Blue: "+liveAPY.morpho.toFixed(1)+"%",
+    "Moonwell: "+liveAPY.moonwell.toFixed(1)+"%",
+    "Compound: "+liveAPY.compound.toFixed(1)+"%",
+    "Aave V3: "+liveAPY.aave.toFixed(1)+"%",
+    "",
+    "https://basedefi.netlify.app"
+  ];
+  var text = lines.join("\n");
+  window.open("https://twitter.com/intent/tweet?text="+encodeURIComponent(text),"_blank");
+}
+
+function addAlert(){
+  var proto = document.getElementById("alertProto").value;
+  var apy = parseFloat(document.getElementById("alertApy").value);
+  if (!apy || apy <= 0) { alert("Enter APY threshold e.g. 5.0"); return; }
+  var protoNames = {aave:"Aave V3",moonwell:"Moonwell",compound:"Compound V3",morpho:"Morpho Blue",aerodrome:"Aerodrome",extra:"Extra Finance"};
+  alerts.push({proto:proto, protoName:protoNames[proto]||proto, apy:apy});
+  try{localStorage.setItem("apyAlerts",JSON.stringify(alerts));}catch(e){}
+  document.getElementById("alertApy").value="";
+  renderAlerts();
+  checkAlerts();
+}
+
+function removeAlert(i){
+  alerts.splice(i,1);
+  try{localStorage.setItem("apyAlerts",JSON.stringify(alerts));}catch(e){}
+  renderAlerts();
+}
+
+function checkAlerts(){
+  alerts.forEach(function(a){
+    var cur=liveAPY[a.proto]||0;
+    if(cur>=a.apy&&"Notification"in window&&Notification.permission==="granted"){
+      new Notification("BaseDeFi Alert!",{body:(a.protoName||a.proto)+" APY is "+cur.toFixed(1)+"% (above "+a.apy+"%)"});
+    }
+  });
+}
+setInterval(checkAlerts,60000);
+
+function renderAlerts(){
+  var list = document.getElementById("alertList");
+  if (!list) return;
+  if (!alerts.length) {
+    list.innerHTML = "<div style='font-size:0.75rem;color:#8b8fa8;padding:4px 0'>No alerts set. Add one above.</div>";
+    return;
+  }
+  list.innerHTML = alerts.map(function(a, i) {
+    var name = a.protoName || a.proto;
+    var current = liveAPY[a.proto] || 0;
+    var triggered = current >= a.apy;
+    return "<div class='alert-item'>" +
+      "<span class='alert-dot-active' style='background:" + (triggered?"#ff4444":"#00c48c") + "'></span>" +
+      "<span class='alert-text'>" + name + " APY &gt; " + a.apy + "% " +
+      "<span style='color:" + (triggered?"#ff4444":"#8b8fa8") + ";font-size:0.7rem'>(now " + current.toFixed(1) + "%)</span></span>" +
+      "<span class='alert-remove' onclick='removeAlert(" + i + ")' style='cursor:pointer;color:#8b8fa8;margin-left:8px'>✕</span>" +
+      "</div>";
+  }).join("");
+}
+
+window.addEventListener("load", function() {
+  setLang("en", "EN", document.querySelector(".lang-option"));
+  calculate();
+  fetchData();
+  fetchNews();
+  fetchBaseTVL();
+  fetchTopPools();
+  renderAlerts();
+  createManifest();
+  if("Notification" in window && Notification.permission==="default") Notification.requestPermission();
+});
+</script>
+</body>
+</html>
