@@ -1276,9 +1276,7 @@ async function executeSwap() {
       "?sellToken=" + sellToken +
       "&buyToken=" + buyToken +
       "&sellAmount=" + sellAmount +
-      "&taker=" + window._walletAddr +
-      "&affiliateAddress=" + AFFILIATE_WALLET +
-      "&affiliateFee=" + AFFILIATE_FEE;
+      "&taker=" + window._walletAddr;
 
     var res = await fetch(proxyUrl);
 
@@ -1288,6 +1286,7 @@ async function executeSwap() {
     }
 
     var quote = await res.json();
+    console.log("0x quote response:", JSON.stringify(quote, null, 2));
 
     if (quote.transaction && quote.transaction.to) {
       var tx = quote.transaction;
